@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package protos;
+
+option go_package = "protos";
+
+enum CRDS {
+    CREATE_DOMAIN = 0x00;
+    UPDATE_DOMAIN = 0x01;
+    DELETE_DOMAIN = 0x02;
+    GET_DOMAIN = 0x03;
+
+    CREATE_KEY = 0x04;
+    UPDATE_KEY = 0x05;
+    DELETE_KEY = 0x06;
+    GET_KEY = 0x07;
+}
+
+message DomainItem {
+    string name = 1;
+    string type = 2;
+    string desc = 3;
+    repeated bytes Cauth = 4;  //authors can create key under this domain
+    repeated bytes Uauth = 5;
+    repeated bytes Dauth = 6;
+    uint64 keycount = 7; // used only for returning key count in GET_DOMAIN action
+    uint64 version = 8;
+}
+message KeyItem {
+    string key = 1;
+    bytes value = 2;
+    string desc = 3;
+    repeated bytes Uauth = 4;
+    repeated bytes Dauth = 5;
+    string dname = 6;  //used only for GET_KEY
+    uint64 version = 7;
+}

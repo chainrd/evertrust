@@ -1,0 +1,14 @@
+
+\.idea/
+
+*.a
+
+
+build/bin/
+CRDcc/\.baap\.db
+cmd/netmux/netmux
+build/prv/go.sum
+go.mod
+go.sum
+cmd/tset
+cmd/libp2pPubkey/libp2pPubkey
