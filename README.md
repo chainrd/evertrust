@@ -1,10 +1,12 @@
 # README.md
-###Use command
+
+Use command
 
 ```
 make evertrust
 ```
-###Create json file
+
+Create json file
 
 first create json file(genesis.json)
 
@@ -62,7 +64,7 @@ first create json file(genesis.json)
 ```
 
 
-###Make datadir directory
+Make datadir directory
 
 Use the above json file to initialize the node and store the file in the corresponding path.
 
@@ -77,7 +79,9 @@ init
 /Users/liu/XXXXXXX/data1
 
 ```
-###Create an account address
+
+Create an account address
+
 After the initialization is successful, the Keystore folder will appear in the corresponding path to store the account private key. 
 
 Use the geth command to create an account.
@@ -99,6 +103,7 @@ The specific running command is as follows:
 ./evertrust --pprof --datadir /Users/liu/XXXXXXX/data2 --mine --minerthreads=2 --networkid 1218 --rpcaddr 0.0.0.0 --rpc --rpccorsdomain "*" --port 12182 --verbosity 5 --ethash.dagdir /Users/liu/XXXXXXX/dagdir --etherbase 0x7de2a31d6ca36302ea7b7917c4fc5ef4c12913b6 --ipcdisable --rpcport 8546  --nodiscover --nat none --unlock 0x7de2a31d6ca36302ea7b7917c4fc5ef4c12913b6 --password /Users/liu/XXXXXXX/password.txt --ccRpcPort 12344
 
 ```
+
 Need to configure the environment variable: export CRD_BAAP_HOME="your path /CRD-chain/CRDcc"
 
 
