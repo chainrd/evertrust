@@ -68,40 +68,17 @@ func (x *CashOut) Run(ctx *PrecompiledContractContext, input []byte, extra map[s
 	ctx.Evm.StateDB.SetCRDState(contractAddr, totalKeyHash, total.Bytes())
 	log.Debug("cash out", "total", total.String())
 
-	// todo debug
-	//log.Debug("/////////////////////////")
-	//log.Debug("cash record")
-	//indexByts := ctx.Evm.StateDB.GetPDXState(contractAddr, cashOutIndexKey)
-	//for indexV := new(big.Int).SetBytes(indexByts); indexV.Cmp(big.NewInt(0)) == +1; indexV.Sub(indexV, big.NewInt(1)) {
-	//	log.Debug("index:", "v", indexV.String())
-	//	txHashB := ctx.Evm.StateDB.GetPDXState(contractAddr, genCashOutNewIndexKey(indexV.String()))
-	//	log.Debug("txhash", "is", common.BytesToHash(txHashB).String())
-	//	r := ctx.Evm.StateDB.GetPDXState(contractAddr, genCashOutTxHashKey(common.BytesToHash(txHashB)))
-	//	rr := new(CashOutRecord)
-	//	err := rlp.DecodeBytes(r, &rr)
-	//	if err != nil {
-	//		log.Error("rlp dec record", "err", err)
-	//	}else {
-	//		log.Debug("tx record", "is", *rr)
-	//		log.Debug("-tx record", "--", rr.TxHash)
-	//		log.Debug("-tx record", "--", rr.Amount)
-	//		log.Debug("-tx record", "--", rr.From)
-	//	}
-	//}
-	//log.Debug("cashOut sum")
-	//bytss := ctx.Evm.StateDB.GetPDXState(contractAddr, totalKeyHash)
-	//log.Debug("sun is", "v", new(big.Int).SetBytes(bytss))
-	//log.Debug("..........................")
+
 
 	return nil, nil
 }
 
 func genCashOutTotalKeyHash() common.Hash {
-	return util.EthHash([]byte("pdx:cashOut:total"))
+	return util.EthHash([]byte("crd:cashOut:total"))
 }
 
 func getCashOutRecordKeyHash(caller common.Address) common.Hash {
-	key := fmt.Sprintf("pdx:cashOut:%s", caller.String())
+	key := fmt.Sprintf("crd:cashOut:%s", caller.String())
 	return util.EthHash([]byte(key))
 }
 

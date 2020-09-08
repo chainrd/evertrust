@@ -1,6 +1,7 @@
 package ethapi
 
 import (
+	"errors"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/golang/protobuf/proto"
@@ -32,6 +33,14 @@ func Parsepoints(tx *types.Transaction, stateDB vm.StateDB) (points string, err 
 				return "", fmt.Errorf("parse cc points:%v", err)
 			}
 			return points, nil
+		}
+
+		if *to == utils.CRDSafeContract {
+			token, err := parseCCpoints(tx.Data())
+			if err != nil {
+				return "", fmt.Errorf("parse safe token:%v", err)
+			}
+			return token, nil
 		}
 
 		//keyHash := utils.CCKeyHash
@@ -127,58 +136,72 @@ func CheckFreeze(tx *types.Transaction, stateDB vm.StateDB, from common.Address)
 	return false
 }
 
-func Checkpoints(tx *types.Transaction, stateDB vm.StateDB) bool {
+func CheckToken(tx *types.Transaction, stateDB vm.StateDB) error {
 	if tx.To() != nil && *tx.To() == utils.AccessCtlContract {
-		log.Trace("access ctl points verify")
-		pointsString, err := Parsepoints(tx, stateDB)
+		log.Trace("access ctl token verify")
+		tokenString, err := Parsepoints(tx, stateDB)
 		if err != nil {
-			log.Error("parse points", "err", err)
-			return false
+			log.Error("parse token", "err", err)
+			return err
 		}
 
-		if !checkJWT(pointsString, "a") {
-			return false
+		if err := checkJWT(tokenString, "a", stateDB); err != nil {
+			return err
 		}
-		return true
+		return nil
+	}
+
+	if tx.To() != nil && *tx.To() == utils.TokenRevokeContract {
+		log.Trace("revoke token verify")
+		tokenString, err := Parsepoints(tx, stateDB)
+		if err != nil {
+			log.Error("parse token", "err", err)
+			return err
+		}
+
+		if err := checkJWT(tokenString, "a", stateDB); err != nil {
+			return err
+		}
+		return nil
 	}
 
 	//DappAuth:T UserAuth:T Deploy:d regular Tx:u/d
 	if evertrust.ConsortiumConf.DappAuth && evertrust.ConsortiumConf.UserAuth {
-		pointsString, err := Parsepoints(tx, stateDB)
+		tokenString, err := Parsepoints(tx, stateDB)
 		if err != nil {
-			log.Error("parse points", "err", err)
-			return false
+			//log.Error("parse token", "err", err)
+			return fmt.Errorf("parse token:%s", err)
 		}
 		//if deploy contract tx must role d
 		if tx.To() == nil || *tx.To() == utils.CCBaapDeploy {
-			if !checkJWT(pointsString, "d") {
-				return false
+			if err := checkJWT(tokenString, "d", stateDB); err != nil {
+				return err
 			}
 		} else {
 			//if not , regular tx must role u at least
-			if !checkJWT(pointsString, "u/d") {
-				return false
+			if err := checkJWT(tokenString, "u/d", stateDB); err != nil {
+				return err
 			}
 		}
 	}
 
 	//DappAuth:F UserAuth:T Deploy:u/d regular Tx:u/d
 	if !evertrust.ConsortiumConf.DappAuth && evertrust.ConsortiumConf.UserAuth {
-		pointsString, err := Parsepoints(tx, stateDB)
+		tokenString, err := Parsepoints(tx, stateDB)
 		if err != nil {
-			log.Error("parse points", "err", err)
-			return false
+			//log.Error("parse token", "err", err)
+			return fmt.Errorf("parse token: %s", err)
 		}
 
 		//if deploy contract tx must role d
 		if tx.To() == nil || *tx.To() == utils.CCBaapDeploy {
-			if !checkJWT(pointsString, "u/d") {
-				return false
+			if err := checkJWT(tokenString, "u/d", stateDB); err != nil {
+				return err
 			}
 		} else {
 			//if not , regular tx must role u at least
-			if !checkJWT(pointsString, "u/d") {
-				return false
+			if err := checkJWT(tokenString, "u/d", stateDB); err != nil {
+				return err
 			}
 		}
 	}
@@ -187,30 +210,37 @@ func Checkpoints(tx *types.Transaction, stateDB vm.StateDB) bool {
 	if evertrust.ConsortiumConf.DappAuth && !evertrust.ConsortiumConf.UserAuth {
 		//if deploy contract tx must role d
 		if tx.To() == nil || *tx.To() == utils.CCBaapDeploy {
-			pointsString, err := Parsepoints(tx, stateDB)
+			tokenString, err := Parsepoints(tx, stateDB)
 			if err != nil {
-				log.Error("parse points", "err", err)
-				return false
+				log.Error("parse token", "err", err)
+				return err
 			}
 
-			if !checkJWT(pointsString, "d") {
-				return false
+			if err := checkJWT(tokenString, "d", stateDB); err != nil {
+				return err
 			}
 		}
 	}
 
 	//DappAuth:F UserAuth:F Deploy:- regular Tx:-
 
-	return true
+	return nil
 }
 
-func checkJWT(pointsString string, roleLimit string) (success bool) {
-	if pointsString == "" {
-		log.Error("pointsString empty")
-		return false
+func checkJWT(tokenString string, roleLimit string, stateDB vm.StateDB) error {
+	if tokenString == "" {
+		//log.Error("tokenString empty")
+		return errors.New("tokenString empty")
 	}
 
-	token, err := jwt.Parse(pointsString, func(token *jwt.Token) (interface{}, error) {
+	// check token revoke
+	key := util.EthHash([]byte(tokenString))
+	s := stateDB.GetCRDState(utils.TokenRevokeContract, key)
+	if len(s) > 0 {
+		return errors.New("token has been revoked")
+	}
+
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Don't forget to validate the alg is what you expect:
 		if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -222,7 +252,7 @@ func checkJWT(pointsString string, roleLimit string) (success bool) {
 
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
-			return nil, fmt.Errorf("points claims type error")
+			return nil, fmt.Errorf("token claims type error")
 		}
 
 		ak, ok := claims["ak"]
@@ -245,45 +275,44 @@ func checkJWT(pointsString string, roleLimit string) (success bool) {
 
 	if err != nil {
 		log.Error("jwt parse", "err", err)
-		return false
+		return err
 	}
 
 	if claims, success := token.Claims.(jwt.MapClaims); success && token.Valid {
 		limit, success := claims["l"].(float64)
 		if !success {
-			log.Error("l not correct")
-			return false
+			//log.Error("l not correct")
+			return errors.New("l not correct")
 		}
-		if !checkLimit(pointsString, int64(limit)) {
-			log.Error("check limit fail")
-			return false
+		if !checkLimit(tokenString, int64(limit)) {
+			//log.Error("check limit fail")
+			return errors.New("check limit fail")
 		}
 
 		role, success := claims["r"]
 		if !success {
 			log.Error("role no match", "role", role, "ok", success)
-
-			return false
+			return errors.New("role no match")
 		}
 		if roleLimit == "d" || roleLimit == "a" {
 			if role != roleLimit {
 				log.Error("role no auth", "role", role, "roleLimit", roleLimit)
-				return false
+				return errors.New("role no auth")
 			}
 		} else {
 			if role == "u" || role == "d" {
 			} else {
 				log.Error("role no exist", "role", role)
-				return false
+				return errors.New("role no exist")
 			}
 		}
 
 	} else {
-		log.Error("points invalid")
-		return false
+		log.Error("token invalid")
+		return errors.New("token invalid")
 	}
 
-	return true
+	return nil
 }
 
 func checkLimit(pointsString string, limit int64) bool {

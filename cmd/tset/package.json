@@ -1,0 +1,36 @@
+{
+  "config":{
+    "chainId":777,
+    "homesteadBlock":0,
+    "eip155Block":0,
+    "eip158Block":0,
+    "evertrust":{
+      "noRewards":true,
+      "cfd":10,
+      "numMasters":3,
+      "blockDelay":2000,
+      "hypothecation":false,
+      "perQuorum":true,
+      "quorumResetAccounts":[
+        "0x86082fa9d3c14d00a8627af13cfa893e80b39101"
+      ],
+      "quorumResetAfterHeight":1,
+      "gasLess":false,
+      "consortium":false
+    },
+    "sm2Crypto":false
+  },
+  "alloc":{
+    "0x86082fa9d3c14d00a8627af13cfa893e80b39101":{
+      "balance":"8500000000000000000000000000"
+    }
+  },
+  "nonce":"0x0000000000000042",
+  "difficulty":"0x1000",
+  "mixhash":"0x0000000000000000000000000000000000000000000000000000000000000000",
+  "coinbase":"0x0000000000000000000000000000000000000000",
+  "timestamp":"0x00",
+  "parentHash":"0x0000000000000000000000000000000000000000000000000000000000000000",
+  "extraData":"0x86082fa9d3c14d00a8627af13cfa893e80b39101",
+  "gasLimit":"0x6422c40"
+}

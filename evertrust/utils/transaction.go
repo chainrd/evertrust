@@ -43,6 +43,7 @@ const (
 	BaapChainIaas             = ":baap-chainiaas"
 	AllowIncrease             = "allow-increase"
 	inCrease                  = "inCrease"
+	tokenRevoke               = "token-revoke"
 )
 
 var (
@@ -65,6 +66,7 @@ var (
 	BaapChainIaasContract          = util.EthAddress(BaapChainIaas)
 	AllowIncreaseContract          = util.EthAddress(AllowIncrease)
 	Increase                       = util.EthAddress(inCrease)
+	TokenRevokeContract            = util.EthAddress(tokenRevoke)
 )
 
 //for solidity and cc extra desc

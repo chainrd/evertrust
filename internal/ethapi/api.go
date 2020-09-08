@@ -1136,6 +1136,18 @@ func (s *PublicBlockChainAPI) doCallRtnState(ctx context.Context, txHash common.
 // Call executes the given transaction on the state for the given block number.
 // It doesn't make and changes in the state/blockchain and is useful to execute and retrieve values.
 func (s *PublicBlockChainAPI) Call(ctx context.Context, args CallArgs, blockNr rpc.BlockNumber) (hexutil.Bytes, error) {
+	stateDB, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	if err != nil {
+		log.Error("get stateDB error", "err", err)
+		return nil, errors.New("get stateDB error")
+	}
+
+	if args.To != nil && *(args.To) == utils.CRDSafeContract {
+		if err := CheckQueryToken(ctx, stateDB); err != nil {
+			return nil, err
+		}
+	}
+
 	result, gas, failed, err := s.doCall(ctx, args, blockNr, vm.Config{}, 5*time.Second)
 	log.Trace("PublicBlockChainAPI.Call", "args", args,
 		"blockNr", blockNr.Int64(),
@@ -2031,20 +2043,6 @@ func (s *PublicTransactionPoolAPI) GetWithDrawTransactionReceipt(ctx context.Con
 	return fields, nil
 }
 
-func CheckQuerypoints(ctx context.Context) error {
-	if evertrust.Consortium {
-		//verify jwt points
-		points, ok := ctx.Value("jwt").(string)
-		if !ok {
-			return errors.New("jwt points illegal")
-		}
-		if !checkJWT(points, "a") {
-			return errors.New("jwt points check fail")
-		}
-	}
-
-	return nil
-}
 
 // GetTransactionReceipt returns the transaction receipt for the given transaction hash.
 func (s *PublicTransactionPoolAPI) GetTransactionReceipt(ctx context.Context, hash common.Hash) (map[string]interface{}, error) {
@@ -2291,8 +2289,13 @@ func (s *PublicTransactionPoolAPI) QueryTrustTreeCommitHash(ctx context.Context,
 
 //set node crt to consortium dir
 func (s *PublicTransactionPoolAPI) SetCrt(ctx context.Context, jwt string, cert string) (success string, err error) {
-	if !checkJWT(jwt, "a") {
-		return "", errors.New("authorization failed")
+	stateDB, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	if err != nil {
+		log.Error("get state db", "err", err)
+		return "", err
+	}
+	if err := checkJWT(jwt, "a", stateDB); err != nil {
+		return "", fmt.Errorf("authorization failed: %s", err)
 	}
 
 	//check cert
@@ -2319,8 +2322,13 @@ func (s *PublicTransactionPoolAPI) SetCrt(ctx context.Context, jwt string, cert 
 //generate node csr for node cert
 func (s *PublicTransactionPoolAPI) GenCsr(ctx context.Context, jwt string, days int, subj string) (csr string, err error) {
 	log.Info("gen csr")
-	if !checkJWT(jwt, "a") {
-		return "", errors.New("authorization failed")
+	stateDB, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	if err != nil {
+		log.Error("get state db", "err", err)
+		return "", err
+	}
+	if err := checkJWT(jwt, "a", stateDB); err != nil {
+		return "", fmt.Errorf("authorization failed: %s", err)
 	}
 
 	if days == 0 {
@@ -2375,7 +2383,7 @@ func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encod
 		return common.Hash{}, err
 	}
 
-	//check points
+	//check token
 	if evertrust.Consortium {
 		stateDB, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
 		if err != nil {
@@ -2398,10 +2406,10 @@ func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, encod
 			return common.Hash{}, errors.New("account has been frozen")
 		}
 
-		//parse points from tx payload
-		ok := Checkpoints(tx, stateDB)
-		if !ok {
-			return common.Hash{}, errors.New("authorization fail")
+		//parse token from tx payload
+		err = CheckToken(tx, stateDB)
+		if err != nil {
+			return common.Hash{}, fmt.Errorf("authorization fail: %s", err)
 		}
 	}
 	//log.Debug("tx", "amount", tx.Value().Uint64(), "price", tx.GasPrice().Uint64(), "limit", tx.Gas(), "size", tx.Size())
@@ -2751,4 +2759,19 @@ func (s *PublicBlockChainAPI) CallFromTxPool(request utils.PrecreateRequest) *ut
 // add by liangc <<<<
 func (s *PublicBlockChainAPI) GetBootNodes() []string {
 	return s.b.Downloader().Worker.Evertrust().GetP2pServer().Config.Alibp2pBootstrapNodes
+}
+
+func CheckQueryToken(ctx context.Context, stateDB vm.StateDB) error {
+	if evertrust.Consortium && evertrust.ConsortiumConf.DappAuth && evertrust.ConsortiumConf.UserAuth {
+		//verify jwt token
+		token, ok := ctx.Value("jwt").(string)
+		if !ok {
+			return errors.New("jwt token illegal")
+		}
+		if err := checkJWT(token, "u/d", stateDB); err != nil {
+			return fmt.Errorf("jwt token check fail: %s", err)
+		}
+	}
+
+	return nil
 }

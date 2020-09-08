@@ -426,12 +426,8 @@ func ParseData2(data []byte) (payload []byte, err error) {
 }
 
 func ParseData(data []byte) (payload []byte, meta utils.Meta, err error) {
-	fmt.Println("ffffffffffffffffffffffff",string(data))
-	fmt.Println("3333",string(ExtensionFlagByte))
-
 	if bytes.HasPrefix(data, ExtensionFlagByte) {
 		dataString := string(data)
-		fmt.Println("ffffffffffffffffffffffff",dataString)
 		splits := strings.Split(dataString, "_")
 		if len(splits) != 3 {
 			return nil, nil, fmt.Errorf("splits != 3, dataString:%s", dataString)

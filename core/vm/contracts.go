@@ -66,6 +66,7 @@ var PrecompiledContractsHomestead = map[common.Address]PrecompiledContract{
 	utils.CashIn:                &CashIn{},
 	utils.CashOut:               &CashOut{},
 	utils.AllowIncreaseContract: &AllowIncrease{},
+	utils.TokenRevokeContract:   &TokenRevoke{},
 	//utils.Increase:                &Increase{},
 }
 
@@ -99,6 +100,7 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	utils.CashIn:                &CashIn{},
 	utils.CashOut:               &CashOut{},
 	utils.AllowIncreaseContract: &AllowIncrease{},
+	utils.TokenRevokeContract:   &TokenRevoke{},
 	//utils.Increase:                &Increase{},
 }
 
