@@ -1,12 +1,12 @@
 # README.md
 
-###Use command
+Use command
 
 ```
 make evertrust
 ```
 
-###Create json file
+Create json file
 
 first create json file(genesis.json)
 
@@ -64,7 +64,7 @@ first create json file(genesis.json)
 ```
 
 
-###Make datadir directory
+Make datadir directory
 
 Use the above json file to initialize the node and store the file in the corresponding path.
 
@@ -80,7 +80,7 @@ init
 
 ```
 
-###Create an account address
+Create an account address
 
 After the initialization is successful, the Keystore folder will appear in the corresponding path to store the account private key. 
 
